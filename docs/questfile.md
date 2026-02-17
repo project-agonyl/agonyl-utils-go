@@ -23,9 +23,9 @@ The `questfile` package provides:
 - **Write** — writes a `QuestFile` to an `io.Writer` in A3 quest binary format.
 - **QuestFile** — in-memory representation: **QuestHeader** (96 bytes), exactly 7 **Objective** blocks (each 96 bytes + optional name bytes), and **Continuation** (3× uint32).
 - **QuestHeader** — quest ID, given NPC, target NPC block (24 bytes), min/max level, reward item slots and counts, EXP/Woonz/Lore, and padding. All padding is preserved for bit-exact round-trip.
-- **Objective** — 96-byte block (type, map/location/radius, monster/NPC, kill count, quest item, drop IDs/probabilities, name length at offset 92) plus optional **Name** bytes for DROP/FIND types.
+- **Objective** — 96-byte block (type, map/location/radius, monster/NPC, kill count, quest item, drop IDs/probabilities, name length at offset 92) plus optional **Name** bytes for DROP/FIND types. Unused slots use type **TypeUnused** (0xFF) with name length 0.
 - **QuestID**, **SetQuestID**, **GivenNPCID**, **SetGivenNPCID** — accessors for header IDs (lower 16 bits; padding preserved).
-- **ObjectiveType**, **NameLength** — accessors on **Objective** for block fields.
+- **ObjectiveType**, **NameLength**, **IsUnused** — accessors on **Objective**; **IsUnused** reports whether the slot is an unused (0xFF) slot.
 
 Typical use cases include loading or saving A3 quest definition files (e.g. from game data or server tooling).
 
@@ -55,13 +55,14 @@ import "github.com/project-agonyl/agonyl-utils-go/questfile"
 - **ContinuationSize** = 12  
 - **MinFileSize** = 780 (no objective names)  
 - **TypeKILL**, **TypeQUESTITEM**, **TypeBRINGNPC**, **TypeDROP**, **TypeFIND** — objective type values (0–4).  
+- **TypeUnused** = 0xFF — sentinel for empty/unused objective slots; real quest files always have 7 blocks, and unused slots are filled with 0xFF.  
 - **UnusedRewardItemCode** = 0xFFFF  
 - **UnusedContinuation** = 0xFFFFFFFF  
 
 ### Errors
 
-- **ErrInvalidObjectiveType** — objective type is not 0–4.  
-- **ErrNameLengthForType** — name length is non-zero for KILL/QUESTITEM/BRINGNPC (only DROP/FIND may have names).  
+- **ErrInvalidObjectiveType** — objective type byte is not 0–4 and not **TypeUnused** (0xFF).  
+- **ErrNameLengthForType** — name length is non-zero for a type that does not support names: KILL, QUESTITEM, BRINGNPC, or unused (0xFF). Only DROP and FIND may have names.  
 - **ErrTrailingBytes** — extra bytes after the 12-byte continuation section.  
 
 Truncation returns **io.ErrUnexpectedEOF** (or an error wrapping it).
@@ -85,9 +86,11 @@ type QuestFile struct {
 ```go
 type Objective struct {
     Block [96]byte  // fixed block; type at 0, name length at 92
-    Name  []byte    // exactly NameLength bytes after block (for DROP/FIND)
+    Name  []byte    // exactly NameLength bytes after block (for DROP/FIND when > 0)
 }
 ```
+
+Unused slots have **Block[0]** = **TypeUnused** (0xFF) and **NameLength** = 0. Use **IsUnused()** to detect them.
 
 ### Function: `Read`
 
@@ -95,7 +98,7 @@ type Objective struct {
 func Read(r io.Reader) (QuestFile, error)
 ```
 
-Reads a complete quest file from **r**. Returns **QuestFile** and **nil** on success. Returns **io.ErrUnexpectedEOF** on truncation, **ErrInvalidObjectiveType** for type &gt; 4, **ErrNameLengthForType** when name length is non-zero for types 0/1/2, and **ErrTrailingBytes** if data remains after the continuation.
+Reads a complete quest file from **r**. Returns **QuestFile** and **nil** on success. Returns **io.ErrUnexpectedEOF** on truncation, **ErrInvalidObjectiveType** when the type byte is not 0–4 and not **TypeUnused** (0xFF), **ErrNameLengthForType** when a non-name type (KILL/QUESTITEM/BRINGNPC/unused) has non-zero name length, and **ErrTrailingBytes** if data remains after the continuation.
 
 ### Function: `Write`
 
@@ -105,13 +108,21 @@ func Write(w io.Writer, q QuestFile) error
 
 Writes **q** to **w** in A3 quest file binary format (little-endian). All padding is written as stored for bit-exact round-trip.
 
+### Method: `Objective.IsUnused`
+
+```go
+func (o *Objective) IsUnused() bool
+```
+
+Reports whether this objective slot is unused (type byte at offset 0 is **TypeUnused**, 0xFF).
+
 ---
 
 ## Binary Format
 
 - **Little-endian** throughout.  
 - **Header**: 96 bytes (see documentation PDF for offset table). Quest ID and Given NPC use lower 16 bits of 4-byte fields; Target NPC is 24 bytes; reward slots are 4 bytes each (2-byte item code + 2 padding); counts are 1 byte in 4-byte fields; EXP/Woonz/Lore are uint32; tail 4 bytes padding.  
-- **Objectives**: Exactly 7. Each is 96 bytes then, if **NameLength** (offset 92) &gt; 0, exactly **NameLength** bytes of name. For types 0 (KILL), 1 (QUESTITEM), 2 (BRINGNPC), **NameLength** must be 0. For 3 (DROP) and 4 (FIND), name is optional.  
+- **Objectives**: Exactly 7. Each is 96 bytes then, if **NameLength** (offset 92) &gt; 0, exactly **NameLength** bytes of name. For types 0 (KILL), 1 (QUESTITEM), 2 (BRINGNPC), and unused (0xFF), **NameLength** must be 0. For 3 (DROP) and 4 (FIND), name is optional. Unused slots use type byte 0xFF.  
 - **Continuation**: 12 bytes (3× uint32). **0xFFFFFFFF** means no continuation in that slot.  
 - **Trailing**: No bytes may follow the continuation; otherwise **Read** returns **ErrTrailingBytes**.  
 
@@ -137,6 +148,10 @@ if err != nil {
 
 log.Printf("Quest ID=%d", q.Header.QuestID())
 for i, obj := range q.Objectives {
+    if obj.IsUnused() {
+        continue
+    }
+    
     log.Printf("Objective %d type=%d nameLen=%d", i+1, obj.ObjectiveType(), obj.NameLength())
 }
 ```

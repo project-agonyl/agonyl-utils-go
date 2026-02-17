@@ -25,6 +25,11 @@ const (
 	TypeBRINGNPC  = 2
 	TypeDROP      = 3
 	TypeFIND      = 4
+
+	// TypeUnused is the sentinel value (0xFF) used to mark empty/unused objective
+	// slots. Real quest files always contain exactly 7 objective blocks; unused
+	// slots are filled with 0xFF bytes rather than a valid type code.
+	TypeUnused = 0xFF
 )
 
 // Sentinel values.
@@ -35,43 +40,54 @@ const (
 
 // Sentinel errors.
 var (
+	// ErrInvalidObjectiveType is returned when an objective block's type byte is
+	// not one of the five defined types (0–4) and is not the unused sentinel
+	// (0xFF).
 	ErrInvalidObjectiveType = errors.New("questfile: invalid objective type")
-	ErrNameLengthForType    = errors.New("questfile: name length must be 0 for this objective type")
-	ErrTrailingBytes        = errors.New("questfile: trailing bytes after continuation")
+
+	// ErrNameLengthForType is returned when an objective whose type does not
+	// support names (KILL, QUESTITEM, BRINGNPC) has a non-zero name-length byte.
+	ErrNameLengthForType = errors.New("questfile: name length must be 0 for this objective type")
+
+	// ErrTrailingBytes is returned when extra bytes are found after the
+	// continuation section.
+	ErrTrailingBytes = errors.New("questfile: trailing bytes after continuation")
 )
 
 // QuestHeader is the fixed 96-byte quest file header.
 // Layout preserves padding for exact round-trip.
 type QuestHeader struct {
-	QuestIDRaw     [4]byte  // 0-3: Quest ID (lower 16 bits) + 2 padding
-	GivenNPCRaw    [4]byte  // 4-7: Given NPC ID (lower 16 bits) + 2 padding
-	TargetNPCBlock [24]byte // 8-31: Target NPC (first 2 bytes = ID) + 22 bytes
+	QuestIDRaw     [4]byte  // 0–3:   Quest ID (lower 16 bits) + 2 padding
+	GivenNPCRaw    [4]byte  // 4–7:   Given NPC ID (lower 16 bits) + 2 padding
+	TargetNPCBlock [24]byte // 8–31:  Target NPC (first 2 bytes = ID) + 22 bytes
 	MinLevel       uint8    // 32
-	MinLevelPad    [3]byte  // 33-35
+	MinLevelPad    [3]byte  // 33–35
 	MaxLevel       uint8    // 36
-	MaxLevelPad    [3]byte  // 37-39
-	QuestFlags     uint32   // 40-43
-	RewardSlot1    [4]byte  // 44-47: item code (UInt16) + 2 padding
-	RewardSlot2    [4]byte  // 48-51
-	RewardSlot3    [4]byte  // 52-55
-	RewardSlot4Pad [4]byte  // 56-59: padding (not used)
-	RewardAreaPad  [8]byte  // 60-67
+	MaxLevelPad    [3]byte  // 37–39
+	QuestFlags     uint32   // 40–43
+	RewardSlot1    [4]byte  // 44–47: item code (UInt16) + 2 padding
+	RewardSlot2    [4]byte  // 48–51
+	RewardSlot3    [4]byte  // 52–55
+	RewardSlot4Pad [4]byte  // 56–59: padding (not used as reward)
+	RewardAreaPad  [8]byte  // 60–67
 	Count1         uint8    // 68
-	Count1Pad      [3]byte  // 69-71
+	Count1Pad      [3]byte  // 69–71
 	Count2         uint8    // 72
-	Count2Pad      [3]byte  // 73-75
+	Count2Pad      [3]byte  // 73–75
 	Count3         uint8    // 76
-	Count3Pad      [3]byte  // 77-79
-	EXP            uint32   // 80-83
-	Woonz          uint32   // 84-87
-	Lore           uint32   // 88-91
-	HeaderTail     [4]byte  // 92-95
+	Count3Pad      [3]byte  // 77–79
+	EXP            uint32   // 80–83
+	Woonz          uint32   // 84–87
+	Lore           uint32   // 88–91
+	HeaderTail     [4]byte  // 92–95
 }
 
-// Objective is one of exactly 7 objectives: a 96-byte block plus optional name bytes.
+// Objective is one of exactly 7 objectives: a 96-byte block plus optional name
+// bytes. Unused slots have type byte 0xFF and all remaining bytes set to 0xFF
+// (except the last four bytes which are 0x00, holding NameLength = 0).
 type Objective struct {
 	Block [96]byte // fixed block; NameLength at offset 92
-	Name  []byte   // exactly NameLength bytes after block (only for DROP/FIND when > 0)
+	Name  []byte   // exactly NameLength bytes after block (only DROP/FIND, when > 0)
 }
 
 // QuestFile is the in-memory representation of an A3 quest file.
@@ -82,13 +98,16 @@ type QuestFile struct {
 }
 
 // Read reads a complete quest file from r.
-// Returns io.ErrUnexpectedEOF on truncation, ErrInvalidObjectiveType for invalid type,
-// ErrNameLengthForType when name length is non-zero for KILL/QUESTITEM/BRINGNPC,
-// and ErrTrailingBytes if extra data follows the continuation section.
+//
+// Error conditions:
+//   - io.ErrUnexpectedEOF  – file is truncated
+//   - ErrInvalidObjectiveType – type byte is not 0–4 or 0xFF
+//   - ErrNameLengthForType    – KILL/QUESTITEM/BRINGNPC block has non-zero name length
+//   - ErrTrailingBytes        – extra data follows the continuation section
 func Read(r io.Reader) (QuestFile, error) {
 	var q QuestFile
 
-	// Header: 96 bytes
+	// ── Header: 96 bytes ────────────────────────────────────────────────────
 	if err := binary.Read(r, binary.LittleEndian, &q.Header); err != nil {
 		if err == io.EOF {
 			return QuestFile{}, io.ErrUnexpectedEOF
@@ -97,9 +116,11 @@ func Read(r io.Reader) (QuestFile, error) {
 		return QuestFile{}, err
 	}
 
-	// Exactly 7 objectives
+	// ── Exactly 7 objectives ────────────────────────────────────────────────
 	for i := range q.Objectives {
 		if _, err := io.ReadFull(r, q.Objectives[i].Block[:]); err != nil {
+			// io.ReadFull already converts EOF → ErrUnexpectedEOF when 0 bytes
+			// were read, but we normalise both cases for clarity.
 			if err == io.EOF {
 				return QuestFile{}, io.ErrUnexpectedEOF
 			}
@@ -110,11 +131,21 @@ func Read(r io.Reader) (QuestFile, error) {
 		objType := q.Objectives[i].Block[0]
 		nameLen := q.Objectives[i].Block[92]
 
-		if objType > TypeFIND {
+		// ErrInvalidObjectiveType. Real files fill unused objective slots with
+		// 0xFF, so TypeUnused (0xFF) must be accepted as a valid no-op slot.
+		// Any other out-of-range value (5–254) is still an error.
+		if objType > TypeFIND && objType != TypeUnused {
 			return QuestFile{}, ErrInvalidObjectiveType
 		}
 
-		if objType <= TypeBRINGNPC && nameLen != 0 {
+		// The name-length guard must also cover the unused (0xFF)
+		// slot. An unused slot should always have nameLen == 0; if it somehow
+		// does not, that is a malformed file. The original condition
+		// (objType <= TypeBRINGNPC) silently skipped unused slots, which
+		// could have caused a spurious name read on a junk byte at offset 92.
+		// We now require nameLen == 0 for every type that does not support
+		// names: KILL, QUESTITEM, BRINGNPC, and the unused sentinel.
+		if objType != TypeDROP && objType != TypeFIND && nameLen != 0 {
 			return QuestFile{}, ErrNameLengthForType
 		}
 
@@ -130,7 +161,7 @@ func Read(r io.Reader) (QuestFile, error) {
 		}
 	}
 
-	// Continuation: 12 bytes (3 x uint32)
+	// ── Continuation: 12 bytes (3 × uint32) ─────────────────────────────────
 	for i := range q.Continuation {
 		if err := binary.Read(r, binary.LittleEndian, &q.Continuation[i]); err != nil {
 			if err == io.EOF {
@@ -141,9 +172,14 @@ func Read(r io.Reader) (QuestFile, error) {
 		}
 	}
 
-	// No trailing bytes allowed
+	// The second clause fires when err is non-nil AND not io.EOF, which would
+	// incorrectly return ErrTrailingBytes for legitimate read errors (e.g.
+	// a network timeout). A read error here means we successfully parsed the
+	// whole file; the error is on a speculative extra read and should be
+	// ignored. We only care whether any bytes were actually returned.
 	var one [1]byte
-	if n, err := r.Read(one[:]); n > 0 || (err != nil && err != io.EOF) {
+	n, _ := r.Read(one[:])
+	if n > 0 {
 		return QuestFile{}, ErrTrailingBytes
 	}
 
@@ -175,12 +211,12 @@ func Write(w io.Writer, q QuestFile) error {
 	return nil
 }
 
-// QuestID returns the quest ID (lower 16 bits of first header field).
+// QuestID returns the quest ID (lower 16 bits of the first header field).
 func (h *QuestHeader) QuestID() uint16 {
 	return binary.LittleEndian.Uint16(h.QuestIDRaw[:2])
 }
 
-// SetQuestID sets the quest ID while preserving the upper 16 bits (padding).
+// SetQuestID sets the quest ID while preserving the upper 2 padding bytes.
 func (h *QuestHeader) SetQuestID(id uint16) {
 	binary.LittleEndian.PutUint16(h.QuestIDRaw[:2], id)
 }
@@ -198,6 +234,11 @@ func (h *QuestHeader) SetGivenNPCID(id uint16) {
 // ObjectiveType returns the objective type byte at offset 0 in the block.
 func (o *Objective) ObjectiveType() uint8 {
 	return o.Block[0]
+}
+
+// IsUnused reports whether this objective slot is an unused (0xFF-filled) slot.
+func (o *Objective) IsUnused() bool {
+	return o.Block[0] == TypeUnused
 }
 
 // NameLength returns the name length byte at offset 92 in the block.
