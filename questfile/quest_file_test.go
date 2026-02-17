@@ -239,6 +239,75 @@ func TestRead_InvalidObjectiveType(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidObjectiveType)
 }
 
+func TestRead_TypeUnusedAccepted(t *testing.T) {
+	q := minimalValidQuestFile()
+	// Objective 2 is unused: type 0xFF, name length 0 (last 4 bytes of block are 0)
+	for i := range q.Objectives[2].Block {
+		q.Objectives[2].Block[i] = 0xFF
+	}
+	q.Objectives[2].Block[92] = 0
+	q.Objectives[2].Block[93] = 0
+	q.Objectives[2].Block[94] = 0
+	q.Objectives[2].Block[95] = 0
+	q.Objectives[2].Name = nil
+	var buf bytes.Buffer
+	require.NoError(t, Write(&buf, q))
+	read, err := Read(&buf)
+	require.NoError(t, err)
+	assert.Equal(t, uint8(TypeUnused), read.Objectives[2].ObjectiveType())
+	assert.True(t, read.Objectives[2].IsUnused())
+	assert.False(t, read.Objectives[0].IsUnused())
+}
+
+func TestRead_TypeUnusedWithNameLengthError(t *testing.T) {
+	q := minimalValidQuestFile()
+	q.Objectives[1].Block[0] = TypeUnused
+	for i := 1; i < 92; i++ {
+		q.Objectives[1].Block[i] = 0xFF
+	}
+	q.Objectives[1].Block[92] = 5
+	q.Objectives[1].Name = make([]byte, 5)
+	var buf bytes.Buffer
+	require.NoError(t, Write(&buf, q))
+	_, err := Read(&buf)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrNameLengthForType)
+}
+
+func TestObjective_IsUnused(t *testing.T) {
+	var o Objective
+	o.Block[0] = TypeKILL
+	assert.False(t, o.IsUnused())
+	o.Block[0] = TypeUnused
+	assert.True(t, o.IsUnused())
+	o.Block[0] = TypeDROP
+	assert.False(t, o.IsUnused())
+}
+
+func TestRoundTrip_WithUnusedObjectiveSlots(t *testing.T) {
+	q := minimalValidQuestFile()
+	q.Objectives[0].Block[0] = TypeKILL
+	q.Objectives[1].Block[0] = TypeUnused
+	for i := range q.Objectives[1].Block {
+		q.Objectives[1].Block[i] = 0xFF
+	}
+	q.Objectives[1].Block[92], q.Objectives[1].Block[93] = 0, 0
+	q.Objectives[1].Block[94], q.Objectives[1].Block[95] = 0, 0
+	q.Objectives[1].Name = nil
+	q.Objectives[2].Block[0] = TypeDROP
+	q.Objectives[2].Block[92] = 3
+	q.Objectives[2].Name = []byte("XYZ")
+	var buf bytes.Buffer
+	require.NoError(t, Write(&buf, q))
+	original := buf.Bytes()
+	read, err := Read(bytes.NewReader(original))
+	require.NoError(t, err)
+	var buf2 bytes.Buffer
+	require.NoError(t, Write(&buf2, read))
+	assert.Equal(t, original, buf2.Bytes())
+	assert.True(t, read.Objectives[1].IsUnused())
+}
+
 func TestRead_ObjectiveFieldsParsed(t *testing.T) {
 	q := minimalValidQuestFile()
 	// Objective 0: set MapID, LocationID, Radius, MonsterID, KillCount, etc.
