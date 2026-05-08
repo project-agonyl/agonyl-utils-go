@@ -177,8 +177,8 @@ func TestRead_KnownBytesDecode(t *testing.T) {
 		0x0A,       // X = 10
 		0x14,       // Y = 20
 		0xCD, 0xAB, // Unknown1 = 0xABCD
-		0x03,       // Orientation = 3
-		0x02,       // SpwanStep = 2
+		0x03, // Orientation = 3
+		0x02, // SpwanStep = 2
 	}
 	buf := bytes.NewReader(raw)
 	data, err := Read(buf)
