@@ -28,14 +28,18 @@ const (
 
 	// TypeUnused is the sentinel value (0xFF) used to mark empty/unused objective
 	// slots. Real quest files always contain exactly 7 objective blocks; unused
-	// slots are filled with 0xFF bytes rather than a valid type code.
-	TypeUnused = 0xFF
+	// slots use this type even though the public PDF only documents types 0-4.
+	TypeUnused = UnusedByte
 )
 
 // Sentinel values.
 const (
-	UnusedRewardItemCode = 0xFFFF
-	UnusedContinuation   = 0xFFFFFFFF
+	UnusedByte   = 0xFF
+	UnusedUint16 = 0xFFFF
+	UnusedUint32 = 0xFFFFFFFF
+
+	UnusedRewardItemCode = UnusedUint16
+	UnusedContinuation   = UnusedUint32
 )
 
 // Sentinel errors.
@@ -83,8 +87,8 @@ type QuestHeader struct {
 }
 
 // Objective is one of exactly 7 objectives: a 96-byte block plus optional name
-// bytes. Unused slots have type byte 0xFF and all remaining bytes set to 0xFF
-// (except the last four bytes which are 0x00, holding NameLength = 0).
+// bytes. Unused slots have type byte 0xFF and NameLength 0; the rest of the
+// block is preserved as-is because real files use more than one filler pattern.
 type Objective struct {
 	Block [96]byte // fixed block; NameLength at offset 92
 	Name  []byte   // exactly NameLength bytes after block (only DROP/FIND, when > 0)
@@ -236,7 +240,7 @@ func (o *Objective) ObjectiveType() uint8 {
 	return o.Block[0]
 }
 
-// IsUnused reports whether this objective slot is an unused (0xFF-filled) slot.
+// IsUnused reports whether this objective slot is unused (type byte 0xFF).
 func (o *Objective) IsUnused() bool {
 	return o.Block[0] == TypeUnused
 }
