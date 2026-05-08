@@ -239,6 +239,16 @@ func TestRead_InvalidObjectiveType(t *testing.T) {
 	assert.ErrorIs(t, err, ErrInvalidObjectiveType)
 }
 
+func TestRead_Type0FIsInvalidObjectiveType(t *testing.T) {
+	q := minimalValidQuestFile()
+	q.Objectives[2].Block[0] = 0x0F
+	var buf bytes.Buffer
+	require.NoError(t, Write(&buf, q))
+	_, err := Read(&buf)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrInvalidObjectiveType)
+}
+
 func TestRead_TypeUnusedAccepted(t *testing.T) {
 	q := minimalValidQuestFile()
 	// Objective 2 is unused: type 0xFF, name length 0 (last 4 bytes of block are 0)
@@ -257,6 +267,29 @@ func TestRead_TypeUnusedAccepted(t *testing.T) {
 	assert.Equal(t, uint8(TypeUnused), read.Objectives[2].ObjectiveType())
 	assert.True(t, read.Objectives[2].IsUnused())
 	assert.False(t, read.Objectives[0].IsUnused())
+}
+
+func TestRead_TypeUnusedVariantFillerPreserved(t *testing.T) {
+	q := minimalValidQuestFile()
+	for i := range q.Objectives[3].Block {
+		q.Objectives[3].Block[i] = 0xFF
+	}
+	q.Objectives[3].Block[4] = 0x12 // observed corpus variant: map bytes are not all 0xFF
+	q.Objectives[3].Block[5] = 0x00
+	q.Objectives[3].Block[8] = 0xFF
+	q.Objectives[3].Block[9] = 0xFE
+	q.Objectives[3].Block[92] = 0
+	q.Objectives[3].Block[93] = 0
+	q.Objectives[3].Block[94] = 0
+	q.Objectives[3].Block[95] = 0
+	q.Objectives[3].Name = nil
+
+	var buf bytes.Buffer
+	require.NoError(t, Write(&buf, q))
+	read, err := Read(&buf)
+	require.NoError(t, err)
+	assert.True(t, read.Objectives[3].IsUnused())
+	assert.Equal(t, q.Objectives[3].Block, read.Objectives[3].Block)
 }
 
 func TestRead_TypeUnusedWithNameLengthError(t *testing.T) {
@@ -308,6 +341,36 @@ func TestRoundTrip_WithUnusedObjectiveSlots(t *testing.T) {
 	assert.True(t, read.Objectives[1].IsUnused())
 }
 
+func TestRoundTrip_ObjectiveNoDataSentinelsPreserved(t *testing.T) {
+	q := minimalValidQuestFile()
+	q.Objectives[0].Block[0] = TypeKILL
+	binary.LittleEndian.PutUint16(q.Objectives[0].Block[24:26], UnusedUint16)
+	binary.LittleEndian.PutUint16(q.Objectives[0].Block[28:30], UnusedUint16)
+	binary.LittleEndian.PutUint16(q.Objectives[0].Block[32:34], UnusedUint16)
+	binary.LittleEndian.PutUint16(q.Objectives[0].Block[36:38], UnusedUint16)
+	binary.LittleEndian.PutUint16(q.Objectives[0].Block[56:58], UnusedUint16)
+	q.Objectives[0].Block[76] = UnusedByte
+	q.Objectives[0].Block[80] = UnusedByte
+	q.Objectives[0].Block[84] = UnusedByte
+	binary.LittleEndian.PutUint32(q.Objectives[0].Block[40:44], UnusedUint32)
+	binary.LittleEndian.PutUint32(q.Objectives[0].Block[88:92], UnusedUint32)
+	q.Continuation[0] = UnusedUint32
+	q.Continuation[1] = 5001
+	q.Continuation[2] = UnusedUint32
+
+	var buf bytes.Buffer
+	require.NoError(t, Write(&buf, q))
+	original := buf.Bytes()
+	read, err := Read(bytes.NewReader(original))
+	require.NoError(t, err)
+	var buf2 bytes.Buffer
+	require.NoError(t, Write(&buf2, read))
+	assert.Equal(t, original, buf2.Bytes())
+	assert.Equal(t, uint16(UnusedUint16), binary.LittleEndian.Uint16(read.Objectives[0].Block[24:26]))
+	assert.Equal(t, uint8(UnusedByte), read.Objectives[0].Block[76])
+	assert.Equal(t, uint32(UnusedUint32), read.Continuation[0])
+}
+
 func TestRead_ObjectiveFieldsParsed(t *testing.T) {
 	q := minimalValidQuestFile()
 	// Objective 0: set MapID, LocationID, Radius, MonsterID, KillCount, etc.
@@ -335,6 +398,26 @@ func TestRead_ObjectiveFieldsParsed(t *testing.T) {
 	assert.Equal(t, uint8(50), read.Objectives[0].Block[76])
 	assert.Equal(t, uint8(25), read.Objectives[0].Block[80])
 	assert.Equal(t, uint8(10), read.Objectives[0].Block[84])
+}
+
+func TestRead_0FAsNormalDataNotPlaceholder(t *testing.T) {
+	q := minimalValidQuestFile()
+	q.Header.SetQuestID(0x000F)
+	binary.LittleEndian.PutUint16(q.Objectives[0].Block[20:22], 0x000F)
+	q.Objectives[0].Block[76] = 0x0F
+	q.Objectives[1].Block[0] = TypeFIND
+	q.Objectives[1].Block[92] = 0x0F
+	q.Objectives[1].Name = []byte("123456789ABCDEF")
+
+	var buf bytes.Buffer
+	require.NoError(t, Write(&buf, q))
+	read, err := Read(&buf)
+	require.NoError(t, err)
+	assert.Equal(t, uint16(0x000F), read.Header.QuestID())
+	assert.Equal(t, uint16(0x000F), binary.LittleEndian.Uint16(read.Objectives[0].Block[20:22]))
+	assert.Equal(t, uint8(0x0F), read.Objectives[0].Block[76])
+	assert.Equal(t, uint8(0x0F), read.Objectives[1].NameLength())
+	assert.Equal(t, []byte("123456789ABCDEF"), read.Objectives[1].Name)
 }
 
 func TestRead_NameLengthZeroForKILL(t *testing.T) {

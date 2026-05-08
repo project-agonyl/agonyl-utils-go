@@ -23,7 +23,7 @@ The `questfile` package provides:
 - **Write** — writes a `QuestFile` to an `io.Writer` in A3 quest binary format.
 - **QuestFile** — in-memory representation: **QuestHeader** (96 bytes), exactly 7 **Objective** blocks (each 96 bytes + optional name bytes), and **Continuation** (3× uint32).
 - **QuestHeader** — quest ID, given NPC, target NPC block (24 bytes), min/max level, reward item slots and counts, EXP/Woonz/Lore, and padding. All padding is preserved for bit-exact round-trip.
-- **Objective** — 96-byte block (type, map/location/radius, monster/NPC, kill count, quest item, drop IDs/probabilities, name length at offset 92) plus optional **Name** bytes for DROP/FIND types. Unused slots use type **TypeUnused** (0xFF) with name length 0.
+- **Objective** — 96-byte block (type, map/location/radius, monster/NPC, kill count, quest item, drop IDs/probabilities, name length at offset 92) plus optional **Name** bytes for DROP/FIND types. The PDF lists objective types 0–4, but real server quest files also use **TypeUnused** (0xFF) with name length 0 for empty objective slots.
 - **QuestID**, **SetQuestID**, **GivenNPCID**, **SetGivenNPCID** — accessors for header IDs (lower 16 bits; padding preserved).
 - **ObjectiveType**, **NameLength**, **IsUnused** — accessors on **Objective**; **IsUnused** reports whether the slot is an unused (0xFF) slot.
 
@@ -55,9 +55,12 @@ import "github.com/project-agonyl/agonyl-utils-go/questfile"
 - **ContinuationSize** = 12  
 - **MinFileSize** = 780 (no objective names)  
 - **TypeKILL**, **TypeQUESTITEM**, **TypeBRINGNPC**, **TypeDROP**, **TypeFIND** — objective type values (0–4).  
-- **TypeUnused** = 0xFF — sentinel for empty/unused objective slots; real quest files always have 7 blocks, and unused slots are filled with 0xFF.  
-- **UnusedRewardItemCode** = 0xFFFF  
-- **UnusedContinuation** = 0xFFFFFFFF  
+- **TypeUnused** = 0xFF — sentinel for empty/unused objective slots; real quest files always have 7 blocks, and unused slots use this type even though the PDF only documents objective types 0–4.  
+- **UnusedByte** = 0xFF — byte-sized no-data sentinel.  
+- **UnusedUint16** = 0xFFFF — UInt16 no-data sentinel.  
+- **UnusedUint32** = 0xFFFFFFFF — UInt32 no-data sentinel.  
+- **UnusedRewardItemCode** = 0xFFFF — alias for the reward-item no-data sentinel.  
+- **UnusedContinuation** = 0xFFFFFFFF — alias for the continuation no-data sentinel.  
 
 ### Errors
 
@@ -90,7 +93,7 @@ type Objective struct {
 }
 ```
 
-Unused slots have **Block[0]** = **TypeUnused** (0xFF) and **NameLength** = 0. Use **IsUnused()** to detect them.
+Unused slots have **Block[0]** = **TypeUnused** (0xFF) and **NameLength** = 0. The remaining filler bytes vary in real quest files and are preserved exactly. Use **IsUnused()** to detect them.
 
 ### Function: `Read`
 
@@ -122,7 +125,8 @@ Reports whether this objective slot is unused (type byte at offset 0 is **TypeUn
 
 - **Little-endian** throughout.  
 - **Header**: 96 bytes (see documentation PDF for offset table). Quest ID and Given NPC use lower 16 bits of 4-byte fields; Target NPC is 24 bytes; reward slots are 4 bytes each (2-byte item code + 2 padding); counts are 1 byte in 4-byte fields; EXP/Woonz/Lore are uint32; tail 4 bytes padding.  
-- **Objectives**: Exactly 7. Each is 96 bytes then, if **NameLength** (offset 92) &gt; 0, exactly **NameLength** bytes of name. For types 0 (KILL), 1 (QUESTITEM), 2 (BRINGNPC), and unused (0xFF), **NameLength** must be 0. For 3 (DROP) and 4 (FIND), name is optional. Unused slots use type byte 0xFF.  
+- **Objectives**: Exactly 7. Each is 96 bytes then, if **NameLength** (offset 92) &gt; 0, exactly **NameLength** bytes of name. For types 0 (KILL), 1 (QUESTITEM), 2 (BRINGNPC), and unused (0xFF), **NameLength** must be 0. For 3 (DROP) and 4 (FIND), name is optional. Unused slots use type byte 0xFF; only the type byte and zero name length are required, because observed filler bytes are not byte-perfect identical.  
+- **Placeholder values**: Real quest files use 0xFF for unused byte-sized values, 0xFFFF for unused UInt16 values, and 0xFFFFFFFF for unused UInt32 values. The apparent 0xFFFFFF pattern is the three padding bytes that follow a byte-sized 0xFF sentinel inside a 4-byte field, not a separate logical value. 0x0F is normal data when it appears in fields such as quest ID, kill count, probability, or name length; it is not an unused objective type.  
 - **Continuation**: 12 bytes (3× uint32). **0xFFFFFFFF** means no continuation in that slot.  
 - **Trailing**: No bytes may follow the continuation; otherwise **Read** returns **ErrTrailingBytes**.  
 
