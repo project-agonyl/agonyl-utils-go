@@ -8,4 +8,5 @@
 - [Questfile (A3 quest file read/write)](questfile.md)
 - [Spawnlist (spawn list read/write)](spawnlist.md)
 - [Itemfile (item file read/write and parsing)](itemfile.md)
+- [ItemCombinationData (crafting file read/write)](itemcombinationdata.md)
 - [Utils (class/nation display names)](utils.md)
