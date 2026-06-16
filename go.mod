@@ -3,7 +3,7 @@ module github.com/project-agonyl/agonyl-utils-go
 go 1.25
 
 require (
-	github.com/cyberinferno/go-utils v0.1.0
+	github.com/cyberinferno/go-utils v0.2.0
 	github.com/stretchr/testify v1.11.1
 )
 
