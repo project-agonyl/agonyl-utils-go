@@ -292,6 +292,21 @@ func (msg *MsgS2CWorldLogin) SetSize() {
 	msg.Size = msg.GetSize()
 }
 
+func NewMsgS2CWorldLogin(pcId uint32) MsgS2CWorldLogin {
+	msg := MsgS2CWorldLogin{
+		MsgHead: MsgHead{
+			Protocol: S2CWorldLogin,
+			MsgHeadNoProtocol: MsgHeadNoProtocol{
+				Ctrl: 0x03,
+				Cmd:  0xFF,
+				PcId: pcId,
+			},
+		},
+	}
+	msg.SetSize()
+	return msg
+}
+
 type MsgS2CCharacterLogin struct {
 	MsgHead
 	CharacterName [0x15]byte

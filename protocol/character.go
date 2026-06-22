@@ -107,3 +107,118 @@ func NewMsgS2CCharacterListEmpty(pcId uint32) MsgS2CCharacterList {
 	msgS2CCharacterList.SetSize()
 	return msgS2CCharacterList
 }
+
+type MsgS2CWarpReady struct {
+	MsgHead
+	WNewMapIndex uint16
+}
+
+func (msg *MsgS2CWarpReady) GetSize() uint32 {
+	return messageSize(msg)
+}
+
+func (msg *MsgS2CWarpReady) SetSize() {
+	msg.Size = msg.GetSize()
+}
+
+func NewMsgS2CWarpReady(pcId uint32) MsgS2CWarpReady {
+	msg := MsgS2CWarpReady{
+		MsgHead: MsgHead{
+			Protocol: S2CWarpReady,
+			MsgHeadNoProtocol: MsgHeadNoProtocol{
+				Ctrl: 0x03,
+				Cmd:  0xFF,
+				PcId: pcId,
+			},
+		},
+	}
+	msg.SetSize()
+	return msg
+}
+
+type MsgS2CWarp struct {
+	MsgHead
+	DwNewCell uint32
+}
+
+func (msg *MsgS2CWarp) GetSize() uint32 {
+	return messageSize(msg)
+}
+
+func (msg *MsgS2CWarp) SetSize() {
+	msg.Size = msg.GetSize()
+}
+
+func NewMsgS2CWarp(pcId uint32) MsgS2CWarp {
+	msg := MsgS2CWarp{
+		MsgHead: MsgHead{
+			Protocol: S2CWarp,
+			MsgHeadNoProtocol: MsgHeadNoProtocol{
+				Ctrl: 0x03,
+				Cmd:  0xFF,
+				PcId: pcId,
+			},
+		},
+	}
+	msg.SetSize()
+	return msg
+}
+
+type MsgS2CWarpLogin struct {
+	MsgHead
+	DwNewCell uint32
+	WearList  [0xa]ZoneServerItemInWear
+	HaveList  [0x1e]ZoneServerItemInInven
+	PetActive ZoneServerPetInfo
+	PetInven  [0x5]ZoneServerPetInfo
+}
+
+func (msg *MsgS2CWarpLogin) GetSize() uint32 {
+	return messageSize(msg)
+}
+
+func (msg *MsgS2CWarpLogin) SetSize() {
+	msg.Size = msg.GetSize()
+}
+
+func NewMsgS2CWarpLogin(pcId uint32) MsgS2CWarpLogin {
+	msg := MsgS2CWarpLogin{
+		MsgHead: MsgHead{
+			Protocol: S2CWarpLogin,
+			MsgHeadNoProtocol: MsgHeadNoProtocol{
+				Ctrl: 0x03,
+				Cmd:  0xFF,
+				PcId: pcId,
+			},
+		},
+	}
+	msg.SetSize()
+	return msg
+}
+
+type MsgS2CCharLogout struct {
+	MsgHead
+}
+
+func (msg *MsgS2CCharLogout) GetSize() uint32 {
+	return messageSize(msg)
+}
+
+func (msg *MsgS2CCharLogout) SetSize() {
+	msg.Size = msg.GetSize()
+}
+
+func NewMsgS2CCharLogout(pcId uint32) MsgS2CCharLogout {
+	msg := MsgS2CCharLogout{
+		MsgHead: MsgHead{
+			Protocol: S2CCharLogout,
+			MsgHeadNoProtocol: MsgHeadNoProtocol{
+				Ctrl: 0x03,
+				Cmd:  0xFF,
+				PcId: pcId,
+			},
+		},
+	}
+	msg.SetSize()
+	return msg
+}
