@@ -85,3 +85,116 @@ func NewMsgS2CSay(pcId uint32, sayType SayType, sayPC string, words string) MsgS
 	msgS2CSay.SetSize()
 	return msgS2CSay
 }
+
+type MsgS2CGesture struct {
+	MsgHead
+	DwGesturePCID uint32
+	ByGestureType uint8
+}
+
+func (msg *MsgS2CGesture) GetSize() uint32 {
+	return messageSize(msg)
+}
+
+func (msg *MsgS2CGesture) SetSize() {
+	msg.Size = msg.GetSize()
+}
+
+func NewMsgS2CGesture(pcId uint32) MsgS2CGesture {
+	msg := MsgS2CGesture{
+		MsgHead: MsgHead{
+			Protocol: S2CGesture,
+			MsgHeadNoProtocol: MsgHeadNoProtocol{
+				Ctrl: 0x03,
+				Cmd:  0xFF,
+				PcId: pcId,
+			},
+		},
+	}
+	msg.SetSize()
+	return msg
+}
+
+type MsgS2COption struct {
+	MsgHead
+	Option ZoneServerGameOption
+}
+
+func (msg *MsgS2COption) GetSize() uint32 {
+	return messageSize(msg)
+}
+
+func (msg *MsgS2COption) SetSize() {
+	msg.Size = msg.GetSize()
+}
+
+func NewMsgS2COption(pcId uint32) MsgS2COption {
+	msg := MsgS2COption{
+		MsgHead: MsgHead{
+			Protocol: S2COption,
+			MsgHeadNoProtocol: MsgHeadNoProtocol{
+				Ctrl: 0x03,
+				Cmd:  0xFF,
+				PcId: pcId,
+			},
+		},
+	}
+	msg.SetSize()
+	return msg
+}
+
+type MsgC2SGesture struct {
+	MsgHead
+	ByGestureType uint8
+}
+
+func (msg *MsgC2SGesture) GetSize() uint32 {
+	return messageSize(msg)
+}
+
+func (msg *MsgC2SGesture) SetSize() {
+	msg.Size = msg.GetSize()
+}
+
+func NewMsgC2SGesture(pcId uint32) MsgC2SGesture {
+	msg := MsgC2SGesture{
+		MsgHead: MsgHead{
+			Protocol: C2SGesture,
+			MsgHeadNoProtocol: MsgHeadNoProtocol{
+				Ctrl: 0x03,
+				Cmd:  0xFF,
+				PcId: pcId,
+			},
+		},
+	}
+	msg.SetSize()
+	return msg
+}
+
+type MsgC2SOption struct {
+	MsgHead
+	Option ZoneServerGameOption
+}
+
+func (msg *MsgC2SOption) GetSize() uint32 {
+	return messageSize(msg)
+}
+
+func (msg *MsgC2SOption) SetSize() {
+	msg.Size = msg.GetSize()
+}
+
+func NewMsgC2SOption(pcId uint32) MsgC2SOption {
+	msg := MsgC2SOption{
+		MsgHead: MsgHead{
+			Protocol: C2SOption,
+			MsgHeadNoProtocol: MsgHeadNoProtocol{
+				Ctrl: 0x03,
+				Cmd:  0xFF,
+				PcId: pcId,
+			},
+		},
+	}
+	msg.SetSize()
+	return msg
+}

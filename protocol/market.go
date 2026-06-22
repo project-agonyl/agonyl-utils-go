@@ -15,3 +15,18 @@ func (msg *MsgC2SOpenMarket) GetSize() uint32 {
 func (msg *MsgC2SOpenMarket) SetSize() {
 	msg.Size = msg.GetSize()
 }
+
+func NewMsgC2SOpenMarket(pcId uint32) MsgC2SOpenMarket {
+	msg := MsgC2SOpenMarket{
+		MsgHead: MsgHead{
+			Protocol: C2SOpenMarket,
+			MsgHeadNoProtocol: MsgHeadNoProtocol{
+				Ctrl: 0x03,
+				Cmd:  0xFF,
+				PcId: pcId,
+			},
+		},
+	}
+	msg.SetSize()
+	return msg
+}
