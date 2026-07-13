@@ -30,21 +30,21 @@ This manifest maps every binary loader in `a3-core/internal/zone_server/zonedata
 | `LoadDerbyGiftTableFile` | `ZoneData/npc/DerbyGift.dat` | `derbygiftfile` | Added | v0.6.0 |
 | `LoadA3EventItemTable` binary rewards | `Event/<EventFileName_*>` | `eventitemrewardfile` | Added | v0.6.0 |
 | `LoadA3PresentRecordsFile` | `Present_<world>.dat`, `Reload_Present_<world>.dat` | `a3presentfile` | Added | v0.6.0 |
-| `LoadQuestExRecordFile` | `ZoneData/quest/*` | `questexfile` | Planned | v0.7.0 |
-| `LoadSQuestScenarioFile` | `ZoneData/SQuest/*` | `squestfile` | Planned | v0.7.0 |
-| `LoadSQuestQuizTableFile` | `ZoneData/SQuest/QuizTable.dat` | `squestquizfile` | Planned | v0.7.0 |
-| `LoadPartyQuestConfigFile` | `ZoneData/PQuest/*` | `partyquestconfigfile` | Planned | v0.7.0 |
-| `LoadPartyQuestPortalFile` | `ZoneData/PQuest/*Portal*` | `partyquestportalfile` | Planned | v0.7.0 |
-| `LoadA3MessageTableFile` | `A3Msg_Zone_Tw.dat`, event siblings | `messagefile` | Planned | v0.7.0 |
-| `LoadTowerConfigFile` | `Tower/*` | `towerconfigfile` | Planned | v0.7.0 |
-| `LoadTowerTreasureTableFile` | `Tower/*` | `towertreasurefile` | Planned | v0.7.0 |
-| `LoadOXQuizConfigFile` | `OXQuiz/*` | `oxquizconfigfile` | Planned | v0.7.0 |
-| `LoadOXQuizTableFile` | `OXQuiz/*` | `oxquizfile` | Planned | v0.7.0 |
-| `LoadTyrBaseFile` | `ZoneData/tyr/*/Base.tyr` | `tyrbasefile` | Planned | v0.7.0 |
-| `LoadTyrPortalFile` | `ZoneData/tyr/*/WarpPortal.tyr` | `tyrportalfile` | Planned | v0.7.0 |
-| `LoadTyrUpgradeFile` | `ZoneData/tyr/*/Upgrade.tyr` | `tyrupgradefile` | Planned | v0.7.0 |
-| `LoadTyrStartPointFile` | `ZoneData/tyr/*/StartPoint.tyr` | `tyrstartpointfile` | Planned | v0.7.0 |
-| `LoadTyrGiftFile` | `ZoneData/tyr/*/Gift.tyr` | `tyrgiftfile` | Planned | v0.7.0 |
-| `LoadTyrNPCRegenFile` | `ZoneData/tyr/*/NPCRegen.tyr` | `tyrnpcregenfile` | Planned | v0.7.0 |
-| `LoadTyrSkillLayerFile` | `ZoneData/tyr/*/SkillLayer.tyr` | `tyrskilllayerfile` | Planned | v0.7.0 |
+| `LoadQuestExRecordFile` | `ZoneData/quest/NNNN.dat` | `questexfile` | Added | v0.7.0 |
+| `LoadSQuestScenarioFile` | `ZoneData/SQuest/*.ini` | None | Text, out of scope | — |
+| `LoadSQuestQuizTableFile` | `ZoneData/SQuest/QuizTable.dat` | `squestquizfile` | Added | v0.7.0 |
+| `LoadPartyQuestConfigFile` | `ZoneData/PQuest/PQ_*.ini` | None | Text, out of scope | — |
+| `LoadPartyQuestPortalFile` | `ZoneData/PQuest/Portal_*.ini` | None | Text, out of scope | — |
+| `LoadA3MessageTableFile` | `A3Msg_Zone_Tw.dat` | `messagefile` | Added | v0.7.0 |
+| `LoadTowerConfigFile` | `Tower/TowerInfo.ini` | None | Text, out of scope | — |
+| `LoadTowerTreasureTableFile` | `Tower/{0..6}.itm` | `towertreasurefile` | Added | v0.7.0 |
+| `LoadOXQuizConfigFile` | `OXQuiz/OXQuizInfo.ini` | None | Text, out of scope | — |
+| `LoadOXQuizTableFile` | `OXQuiz/OXQuizTable.dat` | `oxquizfile` | Added | v0.7.0 |
+| `LoadTyrBaseFile` | `ZoneData/tyr/BaseInfo.tyr` | `tyrbasefile` | Added | v0.7.0 |
+| `LoadTyrPortalFile` | `ZoneData/tyr/WarpPortal.tyr` | `tyrportalfile` | Added | v0.7.0 |
+| `LoadTyrUpgradeFile` | `ZoneData/tyr/Upgrade.tyr` | `tyrupgradefile` | Added | v0.7.0 |
+| `LoadTyrStartPointFile` | `ZoneData/tyr/StartPoint.tyr` | `tyrstartpointfile` | Added | v0.7.0 |
+| `LoadTyrGiftFile` | `ZoneData/tyr/TyrGift.dat` | `tyrgiftfile` | Added | v0.7.0 |
+| `LoadTyrNPCRegenFile` | `ZoneData/tyr/NPCRegen.tyr` | `tyrnpcregenfile` | Added | v0.7.0 |
+| `LoadTyrSkillLayerFile` | `ZoneData/tyr/SkillLayer.tyr` | `tyrskilllayerfile` | Added | v0.7.0 |
 | `LoadNPCShopInfoFile` | `ZoneData/shop/*.txt` | None | Text, out of scope | — |
