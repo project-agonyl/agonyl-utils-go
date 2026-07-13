@@ -21,14 +21,15 @@ This manifest maps every binary loader in `a3-core/internal/zone_server/zonedata
 | `LoadItemTable2File` | `ZoneData/item/2` | `itemfile` | Existing | Before v0.5.0 |
 | `LoadItemTable3File` | `ZoneData/item/3` | `itemfile` | Existing | Before v0.5.0 |
 | `LoadItemCombinationTableFile` | `ZoneData/item/ItemCombinationData` | `itemcombinationdata` | Existing | Before v0.5.0 |
-| `LoadCashItemTableFile` | `ZoneData/item/CashItem.dat` | `cashitemfile` | Planned | v0.6.0 |
-| `LoadSetItemTableFiles` | `ZoneData/item/SetItem*` | `setitemfile` | Planned | v0.6.0 |
-| `LoadPresentItemSetTableFile` | `ZoneData/item/PresentItemSet.dat` | `presentitemsetfile` | Planned | v0.6.0 |
-| `LoadPetTableFile` | `ZoneData/item/pet` | `petfile` | Planned | v0.6.0 |
-| `LoadShueCombinationTableFile` | `ZoneData/item/ShueCombinationData` | `shuecombinationfile` | Planned | v0.6.0 |
-| `LoadLotteryPresentTableFile` | `Event/LotteryItem.dat` | `lotteryfile` | Planned | v0.6.0 |
-| `LoadDerbyGiftTableFile` | `Event/DerbyGift.dat` | `derbygiftfile` | Planned | v0.6.0 |
-| `LoadA3PresentRecordsFile` | `Event/A3Present.dat` | `a3presentfile` | Planned | v0.6.0 |
+| `LoadCashItemTableFile` | `ZoneData/shop/CashItemTbl.dat` | `cashitemfile` | Added | v0.6.0 |
+| `LoadSetItemTableFiles` | `ZoneData/item/SIT{0,1,2,3}` | `setitemfile` | Added | v0.6.0 |
+| `LoadPresentItemSetTableFile` | `ZoneData/item/PresentItemSet.dat` | `presentitemsetfile` | Added | v0.6.0 |
+| `LoadPetTableFile` | `ZoneData/item/pet` | `petfile` | Added | v0.6.0 |
+| `LoadShueCombinationTableFile` | `ZoneData/item/ShueCombinationData` | `shuecombinationfile` | Added | v0.6.0 |
+| `LoadLotteryPresentTableFile` | `Event/LotteryItem.dat` | `lotteryfile` | Added | v0.6.0 |
+| `LoadDerbyGiftTableFile` | `ZoneData/npc/DerbyGift.dat` | `derbygiftfile` | Added | v0.6.0 |
+| `LoadA3EventItemTable` binary rewards | `Event/<EventFileName_*>` | `eventitemrewardfile` | Added | v0.6.0 |
+| `LoadA3PresentRecordsFile` | `Present_<world>.dat`, `Reload_Present_<world>.dat` | `a3presentfile` | Added | v0.6.0 |
 | `LoadQuestExRecordFile` | `ZoneData/quest/*` | `questexfile` | Planned | v0.7.0 |
 | `LoadSQuestScenarioFile` | `ZoneData/SQuest/*` | `squestfile` | Planned | v0.7.0 |
 | `LoadSQuestQuizTableFile` | `ZoneData/SQuest/QuizTable.dat` | `squestquizfile` | Planned | v0.7.0 |
