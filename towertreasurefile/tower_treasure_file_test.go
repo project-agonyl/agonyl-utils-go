@@ -16,7 +16,14 @@ func TestRoundTripPreservesPartialTail(t *testing.T) {
 	require.NoError(t, Write(&out, d))
 	require.Equal(t, byte(9), out.Bytes()[RecordSize])
 }
-func TestReadRejectsTooManyRows(t *testing.T) {
-	_, e := Read(bytes.NewReader(make([]byte, RecordSize*(MaxRecords+1))))
-	require.Error(t, e)
+func TestReadPreservesRowsBeyondRuntimeCapAsOpaqueTail(t *testing.T) {
+	raw := make([]byte, RecordSize*(MaxRecords+1))
+	raw[len(raw)-1] = 9
+	data, err := Read(bytes.NewReader(raw))
+	require.NoError(t, err)
+	require.Len(t, data.Records, MaxRecords)
+	require.Equal(t, raw[MaxRecords*RecordSize:], data.Trailing)
+	var encoded bytes.Buffer
+	require.NoError(t, Write(&encoded, data))
+	require.Equal(t, raw, encoded.Bytes())
 }

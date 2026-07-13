@@ -23,7 +23,7 @@ func Read(r io.Reader) (Data, error) {
 	}
 	count := len(b) / RecordSize
 	if count > MaxRecords {
-		return Data{}, fmt.Errorf("tower treasure file: count %d exceeds %d", count, MaxRecords)
+		count = MaxRecords
 	}
 	data := Data{Records: make([]Record, count), Trailing: append([]byte(nil), b[count*RecordSize:]...)}
 	for i := range data.Records {
